@@ -12,28 +12,27 @@ pro moses2_deconvolve_fft
   restore, 'IDLWorkspace/MOSES2_LevelOne_Dataset/mosesLevelOne.sav'
 
   img = cube_zero[*,*,10]
-  shift_img = shift(img, 10)
+  shift_img = shift(img, 100)
   double_img = 0.5*img + 0.5*shift_img
   
-  i1 = image(bytscl(img))
-  i2 = image(bytscl(double_img))
+  i1 = image(bytscl(sqrt(img)))
+  i2 = image(bytscl(sqrt(double_img)))
   
   convol_orig = convol_fft(img, temp, /AUTO_CORRELATION)
   convol_double = convol_fft(double_img, temp, /AUTO_CORRELATION)
   
-  p1 = plot(convol_orig[*,511])
-  p1 = plot(convol_double[*,511], /overplot)
+  p1 = plot(convol_orig[*,511],color = "blue")
+  p1 = plot(convol_double[*,511], color = "red", /overplot)
   
-  p3 = plot(convol_orig[1023,*])
-  p3 = plot(convol_double[1023,*], /overplot)
+  p3 = plot(convol_orig[1023,*], color = "blue")
+  p3 = plot(convol_double[1023,*], color = "red", /overplot)
   
-  p2 = plot(deriv(deriv(convol_orig[*,511])))
-  p4 = plot(deriv(deriv(convol_double[*,511])))
+  p2 = plot(deriv(deriv(convol_orig[*,511])), color = "blue")
+  p2 = plot(deriv(deriv(convol_double[*,511])), color = "red", /overplot)
   
   xtv, deriv(deriv(convol_orig))
   xtv, deriv(deriv(convol_double))
-  
-  p1.close
+
   
 ;  output_dir = 'IDLWorkspace/MOSES2_FFTdeconvol'
 ;  zero_tiff = bytscl(sqrt(zero_autocor))
