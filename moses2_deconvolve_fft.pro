@@ -12,28 +12,34 @@
 restore, 'IDLWorkspace/MOSES2_LevelOne_Dataset/mosesDarkSub.sav'
 
 ; Define images needed for computation
-oimg = cube_zero[*,*,17]
-oshift_img = shift(oimg, 20,20)
-odouble_img = 0.5*oimg + 0.5*oshift_img
-atrous_tr, oimg, 20, decomp=oimgd
+;oimg = cube_zero[*,*,17]
+;oimg -= mean(oimg)
+;win = hanning(Nx, Ny)
+;oimg = oimg * win
+;;oshift_img = shift(oimg, 20,20)
+;;odouble_img = 0.5*oimg + 0.5*oshift_img
+;atrous_tr, oimg, 20, decomp=oimgd
+;
+;; Compute the autocorrelation
+;oconvol_orig = convol_fft(oimg, temp, /AUTO_CORRELATION)
+;oconvol_double = convol_fft(odouble_img, temp, /AUTO_CORRELATION)
+;oconvol_atrous = convol_fft(oimgd[*,*,6], temp, /auto_correlation)
+;
+;; Compute the Lapalacian of the autocorrelation
+;ograd_orig = gradient(gradient(oconvol_orig))
+;ograd_double = gradient(gradient(oconvol_double))
+;ograd_atrous = gradient(gradient(oconvol_atrous))
 
-; Compute the autocorrelation
-oconvol_orig = convol_fft(oimg, temp, /AUTO_CORRELATION)
-oconvol_double = convol_fft(odouble_img, temp, /AUTO_CORRELATION)
-oconvol_atrous = convol_fft(oimgd[*,*,6], temp, /auto_correlation)
-
-; Compute the Lapalacian of the autocorrelation
-ograd_orig = gradient(gradient(oconvol_orig))
-ograd_double = gradient(gradient(oconvol_double))
-ograd_atrous = gradient(gradient(oconvol_atrous))
-
-ax = 7
-ay = 1
+ax = 8
+ay = 2
 intensity = 0.3
 
 J = complex(0,1) ; imaginary unit
 K = k_arr2d(Nx, Ny, /radians, big_kx=kx, big_ky=ky)
 output_dir = 'IDLWorkspace/MOSES2_LevelOne_Dataset/MOSES2_tiff_images_level1'
+noise_kern = [[1.0,2.0,1.0],[2.0,4.0,2.0],[1.0,2.0,1.0]] ; Define Charles' special noise filtering kernel
+noise_kern /= 16
+
 
 ; Loop through data cube to deconvolve each exposure
 for i = 0, Ndata-1 do begin
@@ -44,49 +50,44 @@ for i = 0, Ndata-1 do begin
   zero_ft /= (1 + intensity * exp(-J*(kx*ax+ky*ay)))
   cube_zero[*,*,i] = real_part(fft(zero_ft, /INVERSE))
 
-endfor
-;
-;ax = 0
-;ay = 9
-;intensity = 0.10
-;
-;; Loop again through data cube to deconvolve each exposure
-;for i = 0, Ndata-1 do begin
-;
-;  d = data_list[i] ; find index of next data image
-;
-;  zero_ft = fft(cube_zero[*,*,i])
-;  zero_ft /= (1 + intensity * exp(-J*(kx*ax+ky*ay)))
-;  cube_zero[*,*,i] = real_part(fft(zero_ft, /INVERSE))
-;
-;  zero_tiff = bytscl(sqrt(cube_zero[*,*,i]))
-;  write_tiff, output_dir+'/zero/'+strmid(index.filename[d],7,12)+string((index.exptime[d]*1e-6), FORMAT='(f20.2)')+'  corrected.tif', zero_tiff
-;
-;endfor
+  
 
-; Save images to disk
+endfor
+
+;oimg = cube_zero[*,*,17]
+
 for i = 0, Ndata-1 do begin
   
-    zero_tiff = bytscl(sqrt(cube_zero[*,*,i]))
-    write_tiff, output_dir+'/zero/'+strmid(index.filename[d],7,12)+string((index.exptime[d]*1e-6), FORMAT='(f20.2)')+'  corrected.tif', zero_tiff
+  ; Filter noise
+  cube_zero[*,*,i] = convol(cube_zero[*,*,i], noise_kern)
+
+  ; Save images to disk
+  zero_tiff = bytscl(sqrt(cube_zero[*,*,i]))
+  write_tiff, output_dir+'/zero/'+strmid(index.filename[d],7,12)+string((index.exptime[d]*1e-6), FORMAT='(f20.2)')+'  corrected.tif', zero_tiff
   
 endfor
 
+
 ; Define images needed for computation
-img = cube_zero[*,*,17]
-shift_img = shift(img, 20,20)
-double_img = 0.5*img + 0.5*shift_img
-atrous_tr, img, 20, decomp=imgd
-
-; Compute the autocorrelation
-convol_orig = convol_fft(img, temp, /AUTO_CORRELATION)
-convol_double = convol_fft(double_img, temp, /AUTO_CORRELATION)
-convol_atrous = convol_fft(imgd[*,*,6], temp, /auto_correlation)
-
-; Compute the Lapalacian of the autocorrelation
-grad_orig = gradient(gradient(convol_orig))
-grad_double = gradient(gradient(convol_double))
-grad_atrous = gradient(gradient(convol_atrous))
+;img = cube_zero[*,*,17]
+;img -=mean(img)
+;win = hanning(Nx, Ny)
+;img = img * win
+;;shift_img = shift(img, 20,20)
+;;double_img = 0.5*img + 0.5*shift_img
+;atrous_tr, img, 20, decomp=imgd
+;
+;
+;
+;; Compute the autocorrelation
+;convol_orig = convol_fft(img, temp, /AUTO_CORRELATION)
+;convol_double = convol_fft(double_img, temp, /AUTO_CORRELATION)
+;convol_atrous = convol_fft(imgd[*,*,6], temp, /auto_correlation)
+;
+;; Compute the Lapalacian of the autocorrelation
+;grad_orig = gradient(gradient(convol_orig))
+;grad_double = gradient(gradient(convol_double))
+;grad_atrous = gradient(gradient(convol_atrous))
 
 
 print, systime()+' MOSES FFT deconvolve saving to disk.'
